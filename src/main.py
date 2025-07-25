@@ -43,6 +43,7 @@ async def download_video(req: DownloadRequest):
         subprocess.run([
             "yt-dlp", req.url,
             "-o", output_path,
+             "--cookies", "/path/to/cookies.txt", 
             "-f", "bestvideo+bestaudio/best",
             "--no-check-certificate",
             "--no-warnings",
@@ -74,6 +75,7 @@ async def download_audio(req: DownloadRequest):
             "yt-dlp",
             "-x",
             "--audio-format", "mp3",
+             "--cookies", "/path/to/cookies.txt", 
             "--audio-quality", "0",
             "-o", output_path,
             req.url
