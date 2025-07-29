@@ -39,6 +39,12 @@ print("This is official file location on your device",DOWNLOAD_DIR)
 # YouTube URL regex
 YOUTUBE_REGEX = re.compile(r"^(https?://)?(www\.)?(youtube\.com|youtu\.?be)/.+")
 
+app.get("/")
+async def read_root():
+    return {
+        "message":"Welcome to tubesave BACKEND API is working very fine "
+    }
+
 @app.post("/api/download")
 async def download_video(req: DownloadRequest, background_tasks: BackgroundTasks):
     if not YOUTUBE_REGEX.match(req.url):
