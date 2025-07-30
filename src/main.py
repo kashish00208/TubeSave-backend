@@ -18,6 +18,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/ping")
+async def ping():
+    return {"message": "pong"}
+
+
 # Request body model
 class DownloadRequest(BaseModel):
     url: str
