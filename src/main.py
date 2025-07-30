@@ -5,14 +5,6 @@ from pydantic import BaseModel
 import subprocess, re, os, time
 from pathlib import Path
 
-from fastapi import BackgroundTasks
-from fastapi.responses import FileResponse
-
-def delete_file(path: str):
-    if os.path.exists(path):
-        os.remove(path)
-
-
 
 app = FastAPI()
 print("started working now")
@@ -34,44 +26,36 @@ class DownloadRequest(BaseModel):
 DOWNLOAD_DIR = Path.home() / "Downloads"
 DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/downloads", StaticFiles(directory=str(DOWNLOAD_DIR)), name="downloads")
+print("started working ")
 print("This is official file location on your device",DOWNLOAD_DIR)
 
 # YouTube URL regex
 YOUTUBE_REGEX = re.compile(r"^(https?://)?(www\.)?(youtube\.com|youtu\.?be)/.+")
 
-app.get("/")
-async def read_root():
-    return {
-        "message":"Welcome to tubesave BACKEND API is working very fine "
-    }
-
 @app.post("/api/download")
-async def download_video(req: DownloadRequest, background_tasks: BackgroundTasks):
+async def download_video(req: DownloadRequest):
+    print("downloading the vdios")
     if not YOUTUBE_REGEX.match(req.url):
         return {"error": "Invalid YouTube URL"}
 
-    filename = f"video_{int(time.time())}.mp4"
+    filename = f"video_{int(time.time())}.%(ext)s"
     output_path = os.path.join(DOWNLOAD_DIR, filename)
 
     try:
         subprocess.run([
-            "yt-dlp",
-            req.url,
-            "-f", "bestvideo+bestaudio/best",
+            "yt-dlp", req.url,
             "-o", output_path,
+            "-f", "bestvideo+bestaudio/best",
             "--no-check-certificate",
             "--no-warnings",
             "--add-header", "referer:youtube.com",
             "--add-header", "user-agent:googlebot"
         ], check=True)
 
-        background_tasks.add_task(delete_file, output_path)
-
-        return FileResponse(
-            output_path,
-            media_type="video/mp4",
-            filename=filename,
-        )
+        return {
+            "message": "Download successful",
+            "fileUrl": f"/downloads/{filename}"
+        }
 
     except subprocess.CalledProcessError as e:
         return {
@@ -79,9 +63,8 @@ async def download_video(req: DownloadRequest, background_tasks: BackgroundTasks
             "details": str(e)
         }
 
-
 @app.post("/api/downloadMp3")
-async def download_audio(req: DownloadRequest, background_tasks: BackgroundTasks):
+async def download_audio(req: DownloadRequest):
     if not YOUTUBE_REGEX.match(req.url):
         return {"error": "Invalid YouTube URL"}
 
@@ -98,22 +81,13 @@ async def download_audio(req: DownloadRequest, background_tasks: BackgroundTasks
             req.url
         ], check=True)
 
-        background_tasks.add_task(delete_file, output_path)
-
-        return FileResponse(
-            output_path,
-            media_type="audio/mpeg",
-            filename=filename,
-        )
+        return {
+            "message": "Audio downloaded successfully",
+            "fileUrl": f"/downloads/{filename}"
+        }
 
     except subprocess.CalledProcessError as e:
         return {
             "error": "Download failed",
             "details": str(e)
         }
-
-
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
