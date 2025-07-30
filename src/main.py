@@ -50,11 +50,8 @@ async def download_video(req: DownloadRequest):
         subprocess.run([
             "yt-dlp", req.url,
             "-o", output_path,
+            "--cookies", "src/youtube_cookies.txt"
             "-f", "bestvideo+bestaudio/best",
-            "--no-check-certificate",
-            "--no-warnings",
-            "--add-header", "referer:youtube.com",
-            "--add-header", "user-agent:googlebot"
         ], check=True)
 
         return {
