@@ -51,7 +51,6 @@ async def download_video(req: DownloadRequest):
     try:
         subprocess.run([
             "yt-dlp", req.url,
-            "--cookies", COOKIES_PATH,
             "-f", "best", 
             "-o", str(output_path)
         ], check=True)
