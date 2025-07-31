@@ -68,7 +68,7 @@ async def download_video(req: DownloadRequest):
             "yt-dlp", req.url,
             "--cookies",COOKIES_PATH,
             "-o", output_path,
-            "-f","136",
+            "-f","b",
         ], check=True)
 
         return {
