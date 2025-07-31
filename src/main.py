@@ -4,6 +4,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import subprocess, re, os, time
 from pathlib import Path
+from fastapi.responses import FileResponse
+
 
 
 app = FastAPI()
@@ -30,7 +32,19 @@ class DownloadRequest(BaseModel):
 
 DOWNLOAD_DIR = Path.home() / "Downloads"
 DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
-app.mount("/downloads", StaticFiles(directory=str(DOWNLOAD_DIR)), name="downloads")
+
+@app.get("/download-file/{filename}")
+async def serve_file(filename: str):
+    file_path = DOWNLOAD_DIR / filename
+    if file_path.exists():
+        return FileResponse(
+            path=file_path,
+            media_type='application/octet-stream',
+            filename=filename
+        )
+    return {"error": "File not found"}
+
+
 print("started working ")
 print("This is official file location on your device",DOWNLOAD_DIR)
 
