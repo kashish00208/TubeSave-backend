@@ -59,16 +59,17 @@ async def download_video(req: DownloadRequest):
     if not YOUTUBE_REGEX.match(req.url):
         return {"error": "Invalid YouTube URL"}
 
-    filename = f"video_{int(time.time())}.%(ext)s"
+    filename = f"video_{int(time.time())}.mp4"
+
     output_path = os.path.join(DOWNLOAD_DIR, filename)
 
-    try:
-        subprocess.run([
-            "yt-dlp", req.url,
-            "-o", output_path,
-            "--cookies", COOKIES_PATH,
-            "-f","b",
-        ], check=True)
+    subprocess.run([
+        "yt-dlp", req.url,
+        "-o", output_path,
+        "--cookies", COOKIES_PATH,
+        "-f", "18"
+    ], check=True)
+
 
         return {
             "message": "Download successful",
