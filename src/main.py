@@ -33,6 +33,8 @@ class DownloadRequest(BaseModel):
 DOWNLOAD_DIR = Path.home() / "Downloads"
 DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
+from fastapi import Response
+
 @app.get("/download-file/{filename}")
 async def serve_file(filename: str):
     file_path = DOWNLOAD_DIR / filename
@@ -40,9 +42,10 @@ async def serve_file(filename: str):
         return FileResponse(
             path=file_path,
             media_type='application/octet-stream',
-            filename=filename
+            filename=filename,
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
         )
-    return {"error": "File not found"}
+    return Response(content='{"error": "File not found"}', media_type="application/json", status_code=404)
 
 
 print("started working ")
