@@ -51,7 +51,7 @@ print("This is official file location on your device",DOWNLOAD_DIR)
 # YouTube URL regex
 YOUTUBE_REGEX = re.compile(r"^(https?://)?(www\.)?(youtube\.com|youtu\.?be)/.+")
 
-COOKIES_PATH = os.path.join(os.path.dirname(__file__), "youtube_cookies.txt")
+COOKIES_PATH = os.path.join(os.path.dirname(__file__), "cookies.txt")
 
 @app.post("/api/download")
 async def download_video(req: DownloadRequest):
@@ -66,8 +66,9 @@ async def download_video(req: DownloadRequest):
     try:
         subprocess.run([
             "yt-dlp", req.url,
+            "--cookies",COOKIES_PATH,
             "-o", output_path,
-            "-f","18",
+            "-f","-b",
         ], check=True)
 
         return {
