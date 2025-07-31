@@ -63,13 +63,13 @@ async def download_video(req: DownloadRequest):
 
     output_path = os.path.join(DOWNLOAD_DIR, filename)
 
-    subprocess.run([
-        "yt-dlp", req.url,
-        "-o", output_path,
-        "--cookies", COOKIES_PATH,
-        "-f", "18"
-    ], check=True)
-
+    try:
+        subprocess.run([
+            "yt-dlp", req.url,
+            "-o", output_path,
+            "--cookies", COOKIES_PATH,
+            "-f","b",
+        ], check=True)
 
         return {
             "message": "Download successful",
