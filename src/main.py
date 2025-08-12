@@ -39,12 +39,14 @@ async def download_video(req: DownloadRequest):
         return {"error": "cookies.txt not found. Please upload valid cookies."}
 
     yt_dlp_cmd = [
-        "yt-dlp",
-        req.url,
-        "--cookies", str(COOKIES_FILE),
-        "-o", output_path,
-        "-f", "b"
-    ]
+    "yt-dlp",
+    req.url,
+    "--cookies", str(COOKIES_FILE),
+    "-f", "bestvideo+bestaudio",
+    "--merge-output-format", "mp4",
+    "--extractor-args", "youtube:player_client=android",
+    "-o", output_path,
+]
 
     try:
         subprocess.run(yt_dlp_cmd, check=True)
