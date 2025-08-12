@@ -1,13 +1,13 @@
 from pathlib import Path
-import subprocess, time, re
-from fastapi import FastAPI, Response
+import subprocess
+import time
+import re
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 app = FastAPI()
 
-# Allow all origins for CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -22,8 +22,8 @@ class DownloadRequest(BaseModel):
 DOWNLOAD_DIR = Path("/tmp/yt-downloads")
 DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-# Absolute path to cookies file (works both locally & on Render)
-COOKIES_FILE = str(Path(__file__).resolve().parent / "src" / "cookies.txt")
+# Path to cookies.txt (next to this file or in your repo)
+COOKIES_FILE = Path(__file__).resolve().parent / "cookies.txt"
 
 YOUTUBE_REGEX = re.compile(r"^(https?://)?(www\.)?(youtube\.com|youtu\.?be)/.+$")
 
@@ -35,25 +35,35 @@ async def download_video(req: DownloadRequest):
     filename = f"video_{int(time.time())}.mp4"
     output_path = str(DOWNLOAD_DIR / filename)
 
-    try:
-        subprocess.run([
-            "yt-dlp",
-            req.url,
-            "--cookies", COOKIES_FILE,
+    # Build yt-dlp command
+    if COOKIES_FILE.exists():
+        yt_dlp_cmd = [
+            "yt-dlp", "--cookies", str(COOKIES_FILE),
             "-o", output_path,
-            "-f", "b"
-        ], check=True)
+            "-f", "b",
+            req.url
+        ]
+    else:
+        # Local dev fallback (only works locally, not on Render)
+        yt_dlp_cmd = [
+            "yt-dlp", "--cookies-from-browser", "chrome",
+            "-o", output_path,
+            "-f", "b",
+            req.url
+        ]
 
+    try:
+        subprocess.run(yt_dlp_cmd, check=True)
         return {
             "message": "Download successful",
             "fileUrl": f"/download-file/{filename}"
         }
-
     except subprocess.CalledProcessError as e:
         return {
             "error": "Download failed",
             "details": str(e)
         }
+
 
 @app.post("/api/downloadMp3")
 async def download_audio(req: DownloadRequest):
