@@ -49,11 +49,12 @@ async def download_video(req: DownloadRequest):
 
     filename = f"video_{int(time.time())}.mp4"
     output_path = str(DOWNLOAD_DIR / filename)
+    cookies_file = str(Path(__file__).parent / "src" / "cookies.txt")
 
     try:
         subprocess.run([
             "yt-dlp", req.url,
-            "--cookies", "cookies.txt"
+            "--cookies", cookies_file,
             "-o", output_path,
             "-f", "b"
         ], check=True)
@@ -68,6 +69,8 @@ async def download_video(req: DownloadRequest):
             "error": "Download failed",
             "details": str(e)
         }
+
+
 
 @app.post("/api/downloadMp3")
 async def download_audio(req: DownloadRequest):
