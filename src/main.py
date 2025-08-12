@@ -22,10 +22,13 @@ class DownloadRequest(BaseModel):
 DOWNLOAD_DIR = Path("/tmp/yt-downloads")
 DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-# Path to cookies.txt (next to this file or in your repo)
 COOKIES_FILE = Path(__file__).resolve().parent / "cookies.txt"
 
 YOUTUBE_REGEX = re.compile(r"^(https?://)?(www\.)?(youtube\.com|youtu\.?be)/.+$")
+
+def run_yt_dlp(cmd):
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    return result
 
 @app.post("/api/download")
 async def download_video(req: DownloadRequest):
@@ -35,61 +38,32 @@ async def download_video(req: DownloadRequest):
     filename = f"video_{int(time.time())}.mp4"
     output_path = str(DOWNLOAD_DIR / filename)
 
-    # Build yt-dlp command
-    if COOKIES_FILE.exists():
-        yt_dlp_cmd = [
-            "yt-dlp", "--cookies", str(COOKIES_FILE),
-            "-o", output_path,
-            "-f", "b",
-            req.url
-        ]
-    else:
-        # Local dev fallback (only works locally, not on Render)
-        yt_dlp_cmd = [
-            "yt-dlp", "--cookies-from-browser", "chrome",
-            "-o", output_path,
-            "-f", "b",
-            req.url
-        ]
+    cmd_no_cookies = [
+        "yt-dlp",
+        "--extractor-args", "youtube:player_client=ios",
+        "-f", "b",
+        "-o", output_path,
+        req.url
+    ]
 
-    try:
-        subprocess.run(yt_dlp_cmd, check=True)
-        return {
-            "message": "Download successful",
-            "fileUrl": f"/download-file/{filename}"
-        }
-    except subprocess.CalledProcessError as e:
-        return {
-            "error": "Download failed",
-            "details": str(e)
-        }
+    res = run_yt_dlp(cmd_no_cookies)
 
+    if res.returncode == 0:
+        return {"message": "Download successful (no cookies)", "fileUrl": f"/download-file/{filename}"}
 
-@app.post("/api/downloadMp3")
-async def download_audio(req: DownloadRequest):
-    if not YOUTUBE_REGEX.match(req.url):
-        return {"error": "Invalid YouTube URL"}
-
-    filename = f"audio_{int(time.time())}.mp3"
-    output_path = str(DOWNLOAD_DIR / filename)
-
-    try:
-        subprocess.run([
+    if "Sign in to confirm you’re not a bot" in res.stderr and COOKIES_FILE.exists():
+        cmd_with_cookies = [
             "yt-dlp",
-            "-x",
-            "--audio-format", "mp3",
-            "--audio-quality", "0",
+            "--cookies", str(COOKIES_FILE),
+            "-f", "b",
             "-o", output_path,
             req.url
-        ], check=True)
+        ]
+        res_cookies = run_yt_dlp(cmd_with_cookies)
 
-        return {
-            "message": "Audio downloaded successfully",
-            "fileUrl": f"/download-file/{filename}"
-        }
+        if res_cookies.returncode == 0:
+            return {"message": "Download successful (with cookies)", "fileUrl": f"/download-file/{filename}"}
+        else:
+            return {"error": "Download failed even with cookies", "details": res_cookies.stderr}
 
-    except subprocess.CalledProcessError as e:
-        return {
-            "error": "Download failed",
-            "details": str(e)
-        }
+    return {"error": "Download failed", "details": res.stderr}
