@@ -22,13 +22,10 @@ class DownloadRequest(BaseModel):
 DOWNLOAD_DIR = Path("/tmp/yt-downloads")
 DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-COOKIES_FILE = Path(__file__).resolve().parent / "cookies.txt"
+COOKIES_FILE = Path(__file__).resolve().parent.parent / "cookies.txt"
+
 
 YOUTUBE_REGEX = re.compile(r"^(https?://)?(www\.)?(youtube\.com|youtu\.?be)/.+$")
-
-def run_yt_dlp(cmd):
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    return result
 
 @app.post("/api/download")
 async def download_video(req: DownloadRequest):
@@ -38,32 +35,25 @@ async def download_video(req: DownloadRequest):
     filename = f"video_{int(time.time())}.mp4"
     output_path = str(DOWNLOAD_DIR / filename)
 
-    cmd_no_cookies = [
+    if not COOKIES_FILE.exists():
+        return {"error": "cookies.txt not found. Please upload valid cookies."}
+
+    yt_dlp_cmd = [
         "yt-dlp",
-        "--extractor-args", "youtube:player_client=ios",
-        "-f", "b",
+        req.url,
+        "--cookies", str(COOKIES_FILE),
         "-o", output_path,
-        req.url
+        "-f", "b"
     ]
 
-    res = run_yt_dlp(cmd_no_cookies)
-
-    if res.returncode == 0:
-        return {"message": "Download successful (no cookies)", "fileUrl": f"/download-file/{filename}"}
-
-    if "Sign in to confirm you’re not a bot" in res.stderr and COOKIES_FILE.exists():
-        cmd_with_cookies = [
-            "yt-dlp",
-            "--cookies", str(COOKIES_FILE),
-            "-f", "b",
-            "-o", output_path,
-            req.url
-        ]
-        res_cookies = run_yt_dlp(cmd_with_cookies)
-
-        if res_cookies.returncode == 0:
-            return {"message": "Download successful (with cookies)", "fileUrl": f"/download-file/{filename}"}
-        else:
-            return {"error": "Download failed even with cookies", "details": res_cookies.stderr}
-
-    return {"error": "Download failed", "details": res.stderr}
+    try:
+        subprocess.run(yt_dlp_cmd, check=True)
+        return {
+            "message": "Download successful",
+            "fileUrl": f"/download-file/{filename}"
+        }
+    except subprocess.CalledProcessError as e:
+        return {
+            "error": "Download failed",
+            "details": e.stderr if e.stderr else str(e)
+        }
