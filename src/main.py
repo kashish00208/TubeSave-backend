@@ -42,7 +42,7 @@ async def download_video(req: DownloadRequest):
         "yt-dlp",
         req.url,
         "--cookies", COOKIES_FILE,
-        "-f", "bestvideo+bestaudio",
+        "-f", "ba",
         "--merge-output-format", "mp4",
         "--extractor-args", "youtube:player_client=android",
         "-o", output_path,
